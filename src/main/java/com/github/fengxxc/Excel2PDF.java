@@ -2,6 +2,7 @@ package com.github.fengxxc;
 
 import com.github.fengxxc.util.ExcelUtil;
 import com.github.fengxxc.util.ITextUtil;
+import com.github.fengxxc.util.Position;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -10,12 +11,18 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
+import org.apache.poi.hssf.usermodel.HSSFPatriarch;
+import org.apache.poi.hssf.usermodel.HSSFPicture;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.apache.poi.xssf.usermodel.XSSFPicture;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -111,6 +118,34 @@ public class Excel2PDF {
             }
             table.startNewRow();
         }
+
+        // render picture
+        final Drawing<?> drawingPatriarch = sheet0.createDrawingPatriarch();
+        List<? extends Shape> shapes = new ArrayList<>();
+        final HashMap<Position, Picture> pos2picture = new HashMap<>();
+        if (drawingPatriarch instanceof XSSFDrawing) {
+            shapes = ((XSSFDrawing) drawingPatriarch).getShapes();
+        } else if (drawingPatriarch instanceof HSSFPatriarch) {
+            shapes = ((HSSFPatriarch) drawingPatriarch).getChildren();
+        }
+        for (Shape shape : shapes) {
+            Picture picture = null;
+            if (shape instanceof HSSFPicture) {
+                picture = ((HSSFPicture) shape);
+            } else if (shape instanceof XSSFPicture) {
+                picture = ((XSSFPicture) shape);
+            } else {
+                continue;
+            }
+            final ClientAnchor clientAnchor = picture.getClientAnchor();
+            // final int row = clientAnchor.getRow1();
+            // 在合并单元格中，poi认为内容单元格是左上角的单元格，而itext认为是左下角的单元格，所以取row2
+            final int row = clientAnchor.getRow2();
+            final Position pos = new Position(clientAnchor.getCol1(), row);
+            pos2picture.put(pos, picture);
+        }
+        table.setNextRenderer(new PdfTableRenderer<>(table, pos2picture));
+
         document.add(table);
 
         document.close();
