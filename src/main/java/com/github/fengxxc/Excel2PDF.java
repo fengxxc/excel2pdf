@@ -7,7 +7,9 @@ import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
@@ -56,15 +58,11 @@ public class Excel2PDF {
      * Excel 转 PDF
      * @param is Excel文件 输入流
      * @param os PDF文件 输出流
-     * @param columnWidths PDF表格列宽
+     * @param columnWidthsArray 每个页的PDF表格列宽
      * @param documentCallback document建立后的回调函数
      * @throws IOException
      */
-    public static void process(InputStream is, OutputStream os, UnitValue[] columnWidths, Consumer<Document> documentCallback) throws IOException {
-        final Workbook workbook = WorkbookFactory.create(is);
-        // final XSSFWorkbook workbook = new XSSFWorkbook(is);
-        final Sheet sheet0 = workbook.getSheetAt(0); // TODO all sheet
-
+    public static void process(InputStream is, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
         // init pdf document
         final PdfWriter pdfWriter = new PdfWriter(os);
         final PdfDocument pdfDocument = new PdfDocument(pdfWriter);
@@ -73,14 +71,41 @@ public class Excel2PDF {
             documentCallback.accept(document);
         }
 
+        final Workbook workbook = WorkbookFactory.create(is);
+        // final XSSFWorkbook workbook = new XSSFWorkbook(is);
+        for (int sheetIdx = 0; sheetIdx < workbook.getNumberOfSheets(); sheetIdx++) {
+            final Sheet sheet = workbook.getSheetAt(sheetIdx);
+            if (sheetIdx > 0) {
+                // 下一页
+                document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+            }
+            UnitValue[] columnWidths = null;
+            if (columnWidthsArray != null && sheetIdx < columnWidthsArray.length) {
+                columnWidths = columnWidthsArray[sheetIdx];
+            }
+            renderSheet(columnWidths, document, sheet);
+        }
+
+        document.close();
+    }
+
+    /**
+     * 渲染一个sheet的内容为表格输出到PDF的document中
+     * @param columnWidths PDF表格列宽，为null则自动计算
+     * @param document PDF的document
+     * @param sheet Excel的sheet
+     * @throws IOException
+     */
+    private static void renderSheet(UnitValue[] columnWidths, Document document, Sheet sheet) throws IOException {
+        final Workbook workbook = sheet.getWorkbook();
         if (columnWidths == null) {
-            columnWidths = ExcelUtil.findMaxRowColWidths(sheet0);
+            columnWidths = ExcelUtil.findMaxRowColWidths(sheet);
         }
         final Table table = new Table(columnWidths, false);
         table.setWidth(new UnitValue(UnitValue.PERCENT, 100)).setVerticalAlignment(VerticalAlignment.MIDDLE);
 
-        final List<CellRangeAddress> combineCellList = ExcelUtil.getCombineCellList(sheet0);
-        for (Row row : sheet0) {
+        final List<CellRangeAddress> combineCellList = ExcelUtil.getCombineCellList(sheet);
+        for (Row row : sheet) {
             int colIdx = 0;
             for (Cell cell : row) {
                 // type
@@ -90,13 +115,11 @@ public class Excel2PDF {
                 // style
                 final CellStyle cellStyle = cell.getCellStyle();
                 // cell width
-                final int columnWidth = sheet0.getColumnWidth(cell.getColumnIndex());
+                final int columnWidth = sheet.getColumnWidth(cell.getColumnIndex());
                 // is combine cell?
                 final CellRangeAddress cellRangeAddress = ExcelUtil.getCombineCellRangeAddress(combineCellList, cell);
                 final boolean isCombineCell = cellRangeAddress != null ? true : false;
                 final boolean isFirstInCombineCell = ExcelUtil.isFirstInCombineCell(cellRangeAddress, cell);
-
-                // log(cell.getRowIndex() + "," + cell.getColumnIndex() + ": " + value + ", type: " + cellType + ", width: " + columnWidth + ", combine: " + isCombineCell);
 
                 // to pdf
                 // 补充空单元格
@@ -120,7 +143,7 @@ public class Excel2PDF {
         }
 
         // render picture
-        final Drawing<?> drawingPatriarch = sheet0.createDrawingPatriarch();
+        final Drawing<?> drawingPatriarch = sheet.createDrawingPatriarch();
         List<? extends Shape> shapes = new ArrayList<>();
         final HashMap<Position, Picture> pos2picture = new HashMap<>();
         if (drawingPatriarch instanceof XSSFDrawing) {
@@ -147,8 +170,6 @@ public class Excel2PDF {
         table.setNextRenderer(new PdfTableRenderer<>(table, pos2picture));
 
         document.add(table);
-
-        document.close();
     }
 
     private static void setPdfTableCellStyle(Workbook workbook, CellStyle cellStyle, com.itextpdf.layout.element.Cell pdfCell) {
@@ -224,9 +245,5 @@ public class Excel2PDF {
                 break;
             default:
         }
-    }
-
-    private static void log(String text) {
-        System.out.println(text);
     }
 }
