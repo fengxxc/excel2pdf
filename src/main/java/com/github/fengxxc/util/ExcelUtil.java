@@ -39,8 +39,7 @@ public class ExcelUtil {
         int sum = 0;
         int[] colWidthCache = new int[max];
         for (int i = 0; i < max; i++) {
-            final Cell cell = maxRow.getCell(i);
-            final int width = sheet.getColumnWidth(cell.getColumnIndex());
+            final int width = sheet.getColumnWidth(i);
             sum += width;
             colWidthCache[i] = width;
         }
