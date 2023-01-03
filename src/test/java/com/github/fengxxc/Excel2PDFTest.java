@@ -37,4 +37,17 @@ public class Excel2PDFTest {
             e.printStackTrace();
         }
     }
+
+    @Test
+    public void process2() {
+        try (InputStream is = Excel2PDF.class.getResourceAsStream("/mayilong_resume2.xlsx");
+             OutputStream os = new FileOutputStream("F:\\temp\\excel2pdf\\mayilong_resume2.pdf")
+        ) {
+            Excel2PDF.process(is, os, document -> {
+
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
