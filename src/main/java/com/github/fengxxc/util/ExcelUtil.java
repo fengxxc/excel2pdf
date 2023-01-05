@@ -265,7 +265,6 @@ public class ExcelUtil {
     }
 
     public static String getDateValue(Short dataFormat, String dataFormatString, double value) {
-        System.out.println(dataFormat + ", " + dataFormatString + ", " + value);
         if (!DateUtil.isValidExcelDate(value)) {
             return null;
         }
