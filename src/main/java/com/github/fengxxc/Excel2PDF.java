@@ -63,6 +63,41 @@ public class Excel2PDF {
      * @throws IOException
      */
     public static void process(InputStream is, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
+        final Workbook workbook = WorkbookFactory.create(is);
+        process(workbook, os, columnWidthsArray, documentCallback);
+
+    }
+
+    /**
+     * Excel 转 PDF
+     * @param workbook POI Workbook 对象
+     * @param os PDF文件 输出流
+     * @throws IOException
+     */
+    public static void process(Workbook workbook, OutputStream os) throws IOException {
+        process(workbook, os, null, null);
+    }
+
+    /**
+     * Excel 转 PDF
+     * @param workbook POI Workbook 对象
+     * @param os PDF文件 输出流
+     * @param documentCallback document建立后的回调函数
+     * @throws IOException
+     */
+    public static void process(Workbook workbook, OutputStream os, Consumer<Document> documentCallback) throws IOException {
+        process(workbook, os, null, documentCallback);
+    }
+
+    /**
+     * Excel 转 PDF
+     * @param workbook POI Workbook 对象
+     * @param os PDF文件 输出流
+     * @param columnWidthsArray 每个页的PDF表格列宽
+     * @param documentCallback document建立后的回调函数
+     * @throws IOException
+     */
+    private static void process(Workbook workbook, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
         // init pdf document
         final PdfWriter pdfWriter = new PdfWriter(os);
         final PdfDocument pdfDocument = new PdfDocument(pdfWriter);
@@ -71,7 +106,6 @@ public class Excel2PDF {
             documentCallback.accept(document);
         }
 
-        final Workbook workbook = WorkbookFactory.create(is);
         // final XSSFWorkbook workbook = new XSSFWorkbook(is);
         for (int sheetIdx = 0; sheetIdx < workbook.getNumberOfSheets(); sheetIdx++) {
             final Sheet sheet = workbook.getSheetAt(sheetIdx);
