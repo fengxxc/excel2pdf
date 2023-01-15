@@ -22,11 +22,16 @@ import java.util.List;
 public class ExcelUtil {
     public static Cell getAboveCell(Cell cell) {
         final int rowIndex = cell.getRowIndex();
+        final int columnIndex = cell.getColumnIndex();
+        final Sheet sheet = cell.getSheet();
+        return getAboveCell(rowIndex, columnIndex, sheet);
+    }
+
+    public static Cell getAboveCell(int rowIndex, int columnIndex, Sheet sheet) {
         if (rowIndex <= 0) {
             return null;
         }
-        final int columnIndex = cell.getColumnIndex();
-        final Row aboveRow = cell.getSheet().getRow(rowIndex - 1);
+        final Row aboveRow = sheet.getRow(rowIndex - 1);
         final Cell aboveRowCell = aboveRow.getCell(columnIndex);
         return aboveRowCell;
     }

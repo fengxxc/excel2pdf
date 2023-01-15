@@ -144,6 +144,16 @@ public class Excel2PDF {
 
         final List<CellRangeAddress> combineCellList = ExcelUtil.getCombineCellList(sheet);
         for (Row row : sheet) {
+            if (row.getPhysicalNumberOfCells() == 0 && !row.getZeroHeight()) {
+                // full row was null
+                final short height = row.getHeight();
+                for (int i = 0; i < columnWidths.length; i++) {
+                    final com.itextpdf.layout.element.Cell cellNull = ITextUtil.cellNull();
+                    cellNull.setHeight(height);
+                    setPdfTableNullCellStyle(sheet, row.getRowNum(), i, cellNull);
+                    table.addCell(cellNull);
+                }
+            }
             int colIdx = 0;
             for (Cell cell : row) {
                 // type
@@ -163,7 +173,7 @@ public class Excel2PDF {
                 // 补充空单元格
                 for (int i = 0; i < cell.getColumnIndex() - colIdx; i++) {
                     final com.itextpdf.layout.element.Cell cellNull = ITextUtil.cellNull();
-                    setPdfTableCellStyle(workbook, cell, cellNull);
+                    setPdfTableNullCellStyle(sheet, row.getRowNum(), colIdx + i, cellNull);
                     table.addCell(cellNull);
                 }
                 int rowSpan = 1;
@@ -210,6 +220,25 @@ public class Excel2PDF {
         table.setNextRenderer(new PdfTableRenderer<>(table, pos2picture));
 
         document.add(table);
+    }
+
+    private static void setPdfTableNullCellStyle(Sheet sheet, int rowIndex, int colIndex, com.itextpdf.layout.element.Cell pdfCell) {
+        // border style
+        final Cell aboveCell = ExcelUtil.getAboveCell(rowIndex, colIndex, sheet);
+        if (aboveCell != null) {
+            final BorderStyle aboveBorderBottom = aboveCell.getCellStyle().getBorderBottom();
+            if (aboveBorderBottom != BorderStyle.NONE) {
+                pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(aboveBorderBottom.getCode()));
+            } else {
+                pdfCell.setBorderTop(Border.NO_BORDER);
+            }
+        } else {
+            pdfCell.setBorderTop(Border.NO_BORDER);
+        }
+
+        pdfCell.setBorderRight(Border.NO_BORDER);
+        pdfCell.setBorderBottom(Border.NO_BORDER);
+        pdfCell.setBorderLeft(Border.NO_BORDER);
     }
 
     private static void setPdfTableCellStyle(Workbook workbook, Cell cell, com.itextpdf.layout.element.Cell pdfCell) {
