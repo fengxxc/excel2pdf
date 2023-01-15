@@ -20,6 +20,25 @@ import java.util.List;
  * @date 2022-12-05
  */
 public class ExcelUtil {
+    public static Cell getAboveCell(Cell cell) {
+        final int rowIndex = cell.getRowIndex();
+        if (rowIndex <= 0) {
+            return null;
+        }
+        final int columnIndex = cell.getColumnIndex();
+        final Row aboveRow = cell.getSheet().getRow(rowIndex - 1);
+        final Cell aboveRowCell = aboveRow.getCell(columnIndex);
+        return aboveRowCell;
+    }
+
+    public static Cell getLeftCell(Cell cell) {
+        final int columnIndex = cell.getColumnIndex();
+        if (columnIndex <= 0) {
+            return null;
+        }
+        final Cell leftCell = cell.getRow().getCell(columnIndex - 1);
+        return leftCell;
+    }
 
     /**
      * 找到最大行，并获取各列宽百分比值

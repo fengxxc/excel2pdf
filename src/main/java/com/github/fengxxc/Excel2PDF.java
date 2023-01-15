@@ -7,6 +7,7 @@ import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.AreaBreakType;
@@ -158,7 +159,9 @@ public class Excel2PDF {
                 // to pdf
                 // 补充空单元格
                 for (int i = 0; i < cell.getColumnIndex() - colIdx; i++) {
-                    table.addCell(ITextUtil.cellNull());
+                    final com.itextpdf.layout.element.Cell cellNull = ITextUtil.cellNull();
+                    setPdfTableCellStyle(workbook, cell, cellNull);
+                    table.addCell(cellNull);
                 }
                 int rowSpan = 1;
                 int colSpan = 1;
@@ -167,7 +170,7 @@ public class Excel2PDF {
                     colSpan = cellRangeAddress.getLastColumn() - cellRangeAddress.getFirstColumn() + 1;
                 }
                 final com.itextpdf.layout.element.Cell pdfCell = ITextUtil.cell(rowSpan, colSpan, value);
-                setPdfTableCellStyle(workbook, cellStyle, pdfCell);
+                setPdfTableCellStyle(workbook, cell, pdfCell);
                 if (!isCombineCell || isFirstInCombineCell) {
                     table.addCell(pdfCell);
                 }
@@ -206,9 +209,26 @@ public class Excel2PDF {
         document.add(table);
     }
 
-    private static void setPdfTableCellStyle(Workbook workbook, CellStyle cellStyle, com.itextpdf.layout.element.Cell pdfCell) {
+    private static void setPdfTableCellStyle(Workbook workbook, Cell cell, com.itextpdf.layout.element.Cell pdfCell) {
+        CellStyle cellStyle = cell.getCellStyle();
         // border style
-        pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderTop().getCode()));
+        final Cell aboveCell = ExcelUtil.getAboveCell(cell);
+        final BorderStyle borderTop = cellStyle.getBorderTop();
+        if (aboveCell != null) {
+            final BorderStyle aboveBorderBottom = aboveCell.getCellStyle().getBorderBottom();
+            if (aboveBorderBottom != BorderStyle.NONE && borderTop == BorderStyle.NONE) {
+                pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(aboveBorderBottom.getCode()));
+            } else if (aboveBorderBottom == BorderStyle.NONE && borderTop != BorderStyle.NONE) {
+                pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(borderTop.getCode()));
+            } else if (aboveBorderBottom != BorderStyle.NONE && borderTop != BorderStyle.NONE) {
+                pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(borderTop.getCode()));
+            } else {
+                pdfCell.setBorderTop(Border.NO_BORDER);
+            }
+        } else {
+            pdfCell.setBorderTop(ITextUtil.POI_TO_ITEXT_BORDER.get(borderTop.getCode()));
+        }
+
         pdfCell.setBorderRight(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderRight().getCode()));
         pdfCell.setBorderBottom(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderBottom().getCode()));
         pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderLeft().getCode()));
