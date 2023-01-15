@@ -136,6 +136,9 @@ public class Excel2PDF {
         if (columnWidths == null) {
             columnWidths = ExcelUtil.findMaxRowColWidths(sheet);
         }
+        if (columnWidths.length == 0) {
+            return;
+        }
         final Table table = new Table(columnWidths, false);
         table.setWidth(new UnitValue(UnitValue.PERCENT, 100)).setVerticalAlignment(VerticalAlignment.MIDDLE);
 
