@@ -32,6 +32,9 @@ public class ExcelUtil {
             return null;
         }
         final Row aboveRow = sheet.getRow(rowIndex - 1);
+        if (aboveRow == null) {
+            return null;
+        }
         final Cell aboveRowCell = aboveRow.getCell(columnIndex);
         return aboveRowCell;
     }
