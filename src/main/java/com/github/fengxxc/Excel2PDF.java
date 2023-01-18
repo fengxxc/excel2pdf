@@ -146,7 +146,7 @@ public class Excel2PDF {
         for (Row row : sheet) {
             if (row.getPhysicalNumberOfCells() == 0 && !row.getZeroHeight()) {
                 // full row was null
-                final short height = row.getHeight();
+                final float height = row.getHeightInPoints();
                 for (int i = 0; i < columnWidths.length; i++) {
                     final com.itextpdf.layout.element.Cell cellNull = ITextUtil.cellNull();
                     cellNull.setHeight(height);
