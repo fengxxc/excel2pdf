@@ -263,7 +263,23 @@ public class Excel2PDF {
 
         pdfCell.setBorderRight(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderRight().getCode()));
         pdfCell.setBorderBottom(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderBottom().getCode()));
-        pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(cellStyle.getBorderLeft().getCode()));
+
+        final Cell leftCell = ExcelUtil.getLeftCell(cell);
+        final BorderStyle borderLeft = cellStyle.getBorderLeft();
+        if (leftCell != null) {
+            final BorderStyle leftBorderRight = leftCell.getCellStyle().getBorderRight();
+            if (leftBorderRight != BorderStyle.NONE && borderLeft == BorderStyle.NONE) {
+                pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(leftBorderRight.getCode()));
+            } else if (leftBorderRight == BorderStyle.NONE && borderLeft != BorderStyle.NONE) {
+                pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(borderLeft.getCode()));
+            } else if (leftBorderRight != BorderStyle.NONE && borderLeft != BorderStyle.NONE) {
+                pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(borderLeft.getCode()));
+            } else {
+                pdfCell.setBorderLeft(Border.NO_BORDER);
+            }
+        } else {
+            pdfCell.setBorderLeft(ITextUtil.POI_TO_ITEXT_BORDER.get(borderLeft.getCode()));
+        }
 
         // background color
         final Color fillForegroundColorColor = cellStyle.getFillForegroundColorColor();
