@@ -20,6 +20,16 @@ import java.util.Map;
 public class ITextUtil {
     // 宋体。",数字",数字表示字体索引
     public static final String FONT_SIMSUN = "C:/Windows/Fonts/simsun.ttc,0";
+    // 黑体
+    public static final String FONT_SIMHEI = "C:/Windows/Fonts/simhei.ttf";
+    // 微软雅黑
+    public static final String FONT_MICROSOFT_YAHEI = "C:/Windows/Fonts/msyh.ttc,0";
+    // 等线
+    public static final String FONT_DENGXIAN = "C:/Windows/Fonts/Deng.ttf";
+    // Times New Roman
+    // public static final String FONT_TIMES = "C:/Windows/Fonts/times.ttf";
+    // Arial
+    // public static final String FONT_ARIAL = "C:/Windows/Fonts/arial.ttf";
     // 仿宋GB2312
     public static final String FONT_FANGSONG_GB2312 = "C:/Windows/Fonts/仿宋GB2312.ttf";
 
@@ -51,7 +61,7 @@ public class ITextUtil {
     public static final String BLANK = "\u00a0";
 
 
-    public static PdfFont getFont(String path) throws IOException {
+    public static PdfFont createFont(String path) throws IOException {
         return PdfFontFactory.createFont(path, PdfEncodings.IDENTITY_H);
     }
 
@@ -60,22 +70,18 @@ public class ITextUtil {
             // 防止单元格高度坍塌
             text = BLANK;
         }
-        return new Cell(rowspan, colspan).add(new Paragraph(text).setFont(font)).setVerticalAlignment(VerticalAlignment.MIDDLE);
-    }
-
-    public static Cell cell(int rowspan, int colspan, String text) throws IOException {
-        return cell(rowspan, colspan, text, getFont(FONT_SIMSUN));
+        final Paragraph paragraph = new Paragraph(text);
+        if (font != null) {
+            paragraph.setFont(font);
+        }
+        return new Cell(rowspan, colspan).add(paragraph).setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
     public static Cell cell(String text, PdfFont font) {
         return cell(1, 1, text, font);
     }
 
-    public static Cell cell(String text) throws IOException {
-        return cell(text, getFont(FONT_SIMSUN));
-    }
-
     public static Cell cellNull() throws IOException {
-        return cell(null).setBorderTop(Border.NO_BORDER).setBorderRight(Border.NO_BORDER).setBorderBottom(Border.NO_BORDER).setBorderLeft(Border.NO_BORDER);
+        return cell(null, null).setBorderTop(Border.NO_BORDER).setBorderRight(Border.NO_BORDER).setBorderBottom(Border.NO_BORDER).setBorderLeft(Border.NO_BORDER);
     }
 }

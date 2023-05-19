@@ -4,6 +4,7 @@ import com.github.fengxxc.util.ExcelUtil;
 import com.github.fengxxc.util.ITextUtil;
 import com.github.fengxxc.util.Position;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
@@ -14,11 +15,15 @@ import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.hssf.usermodel.HSSFFont;
 import org.apache.poi.hssf.usermodel.HSSFPatriarch;
 import org.apache.poi.hssf.usermodel.HSSFPicture;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFPicture;
 
 import java.io.IOException;
@@ -27,6 +32,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -34,6 +40,8 @@ import java.util.function.Consumer;
  * @date 2022-12-05
  */
 public class Excel2PDF {
+    public static String DEFAULT_FONT_PATH = ITextUtil.FONT_SIMSUN;
+
     /**
      * Excel 转 PDF
      * @param is Excel文件 输入流
@@ -99,10 +107,15 @@ public class Excel2PDF {
      * @throws IOException
      */
     private static void process(Workbook workbook, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
+        Map<String, PdfFont> fontCache = new HashMap<String, PdfFont>() {{
+            put(DEFAULT_FONT_PATH, ITextUtil.createFont(DEFAULT_FONT_PATH));
+        }};
+
         // init pdf document
         final PdfWriter pdfWriter = new PdfWriter(os);
         final PdfDocument pdfDocument = new PdfDocument(pdfWriter);
         final Document document = new Document(pdfDocument);
+        document.setFont(fontCache.get(DEFAULT_FONT_PATH));
         if (documentCallback != null) {
             documentCallback.accept(document);
         }
@@ -118,7 +131,7 @@ public class Excel2PDF {
             if (columnWidthsArray != null && sheetIdx < columnWidthsArray.length) {
                 columnWidths = columnWidthsArray[sheetIdx];
             }
-            renderSheet(columnWidths, document, sheet);
+            renderSheet(columnWidths, document, sheet, fontCache);
         }
 
         document.close();
@@ -129,9 +142,10 @@ public class Excel2PDF {
      * @param columnWidths PDF表格列宽，为null则自动计算
      * @param document PDF的document
      * @param sheet Excel的sheet
+     * @param fontCache
      * @throws IOException
      */
-    private static void renderSheet(UnitValue[] columnWidths, Document document, Sheet sheet) throws IOException {
+    private static void renderSheet(UnitValue[] columnWidths, Document document, Sheet sheet, Map<String, PdfFont> fontCache) throws IOException {
         final Workbook workbook = sheet.getWorkbook();
         if (columnWidths == null) {
             columnWidths = ExcelUtil.findMaxRowColWidths(sheet);
@@ -182,7 +196,13 @@ public class Excel2PDF {
                     rowSpan = cellRangeAddress.getLastRow() - cellRangeAddress.getFirstRow() + 1;
                     colSpan = cellRangeAddress.getLastColumn() - cellRangeAddress.getFirstColumn() + 1;
                 }
-                final com.itextpdf.layout.element.Cell pdfCell = ITextUtil.cell(rowSpan, colSpan, value);
+                final String fontPath = getFontPath(workbook, cellStyle);
+                com.itextpdf.layout.element.Cell pdfCell;
+                if (DEFAULT_FONT_PATH.equals(fontPath)) {
+                    pdfCell = ITextUtil.cell(rowSpan, colSpan, value, null);
+                } else {
+                    pdfCell = ITextUtil.cell(rowSpan, colSpan, value, getFont(fontCache, fontPath));
+                }
                 setPdfTableCellStyle(workbook, cell, pdfCell);
                 if (!isCombineCell || isFirstInCombineCell) {
                     table.addCell(pdfCell);
@@ -220,6 +240,43 @@ public class Excel2PDF {
         table.setNextRenderer(new PdfTableRenderer<>(table, pos2picture));
 
         document.add(table);
+    }
+
+    private static PdfFont getFont(Map<String, PdfFont> fontCache, String fontPath) throws IOException {
+        PdfFont font = fontCache.get(fontPath);
+        if (font == null) {
+            font = ITextUtil.createFont(fontPath);
+            fontCache.put(fontPath, font);
+        }
+        return font;
+    }
+
+    private static String getFontPath(Workbook workbook, CellStyle cellStyle) {
+        String fontPath;
+        String fontName = null;
+        if (cellStyle instanceof XSSFCellStyle) {
+            final XSSFFont xssfFont = ((XSSFCellStyle) cellStyle).getFont();
+            fontName = xssfFont.getFontName();
+        } else if (cellStyle instanceof HSSFCellStyle) {
+            final HSSFFont hssfFont = ((HSSFCellStyle) cellStyle).getFont(workbook);
+            fontName = hssfFont.getFontName();
+        }
+        switch (fontName) {
+            case "宋体":
+                fontPath = ITextUtil.FONT_SIMSUN;
+                break;
+            case "Arial":
+            case "Times New Roman":
+            case "等线":
+                fontPath = ITextUtil.FONT_DENGXIAN;
+                break;
+            case "黑体":
+                fontPath = ITextUtil.FONT_SIMHEI;
+                break;
+            default:
+                fontPath = ITextUtil.FONT_SIMSUN;
+        }
+        return fontPath;
     }
 
     private static void setPdfTableNullCellStyle(Sheet sheet, int rowIndex, int colIndex, com.itextpdf.layout.element.Cell pdfCell) {
