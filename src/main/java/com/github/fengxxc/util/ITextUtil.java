@@ -74,7 +74,8 @@ public class ITextUtil {
         if (font != null) {
             paragraph.setFont(font);
         }
-        return new Cell(rowspan, colspan).add(paragraph).setVerticalAlignment(VerticalAlignment.MIDDLE);
+        Cell cell = new Cell(rowspan, colspan).add(paragraph).setVerticalAlignment(VerticalAlignment.MIDDLE).setPadding(0);
+        return cell;
     }
 
     public static Cell cell(String text, PdfFont font) {
