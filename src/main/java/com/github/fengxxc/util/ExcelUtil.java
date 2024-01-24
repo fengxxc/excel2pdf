@@ -226,7 +226,7 @@ public class ExcelUtil {
                 cellValue = getDateValue(cell.getCellStyle().getDataFormat(), cell.getCellStyle().getDataFormatString(),
                         cell.getNumericCellValue());
                 if (cellValue == null) {
-                    cellValue = String.valueOf(cell.getNumericCellValue());
+                    cellValue = doubleCoverToString(cell.getNumericCellValue());
                 }
                 break;
             case STRING:
@@ -449,4 +449,14 @@ public class ExcelUtil {
         List<Short> EXCEL_FORMAT_INDEX_TIME_EXACT = Arrays.asList(new Short[]{55, 56});
 
     }
+
+    public static String doubleCoverToString(double value) {
+        if (value == (int) value) {
+            // 如果小数部分为零，则不保留小数
+            return String.valueOf((int) value);
+        }
+        // 如果有小数部分，则保留小数
+        return String.valueOf(value);
+    }
+
 }
