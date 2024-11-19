@@ -4,6 +4,7 @@ import com.github.fengxxc.util.ExcelUtil;
 import com.github.fengxxc.util.ITextUtil;
 import com.github.fengxxc.util.Position;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -49,7 +50,7 @@ public class Excel2PDF {
      * @throws IOException
      */
     public static void process(InputStream is, OutputStream os) throws IOException {
-        process(is, os, null, null);
+        process(is, os, null, null, null);
     }
 
     /**
@@ -67,14 +68,40 @@ public class Excel2PDF {
      * Excel 转 PDF
      * @param is Excel文件 输入流
      * @param os PDF文件 输出流
+     * @param documentCallback document建立后的回调函数
+     * @param documentCallback document建立后的回调函数
+     * @throws IOException
+     */
+    public static void process(InputStream is, OutputStream os, Consumer<Document> documentCallback, Consumer<E2pPageEvent> pageStartedCallback) throws IOException {
+        final Workbook workbook = WorkbookFactory.create(is);
+        process(workbook, os, null, documentCallback, pageStartedCallback);
+    }
+
+    /**
+     * Excel 转 PDF
+     * @param is Excel文件 输入流
+     * @param os PDF文件 输出流
      * @param columnWidthsArray 每个页的PDF表格列宽
      * @param documentCallback document建立后的回调函数
      * @throws IOException
      */
     public static void process(InputStream is, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
         final Workbook workbook = WorkbookFactory.create(is);
-        process(workbook, os, columnWidthsArray, documentCallback);
+        process(workbook, os, columnWidthsArray, documentCallback, null);
+    }
 
+    /**
+     * Excel 转 PDF
+     * @param is Excel文件 输入流
+     * @param os PDF文件 输出流
+     * @param columnWidthsArray 每个页的PDF表格列宽
+     * @param documentCallback document建立后的回调函数
+     * @param pageStartedCallback page建立后的回调函数
+     * @throws IOException
+     */
+    public static void process(InputStream is, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback, Consumer<E2pPageEvent> pageStartedCallback) throws IOException {
+        final Workbook workbook = WorkbookFactory.create(is);
+        process(workbook, os, columnWidthsArray, documentCallback, pageStartedCallback);
     }
 
     /**
@@ -84,7 +111,7 @@ public class Excel2PDF {
      * @throws IOException
      */
     public static void process(Workbook workbook, OutputStream os) throws IOException {
-        process(workbook, os, null, null);
+        process(workbook, os, null, null, null);
     }
 
     /**
@@ -95,18 +122,32 @@ public class Excel2PDF {
      * @throws IOException
      */
     public static void process(Workbook workbook, OutputStream os, Consumer<Document> documentCallback) throws IOException {
-        process(workbook, os, null, documentCallback);
+        process(workbook, os, null, documentCallback, null);
     }
 
     /**
      * Excel 转 PDF
      * @param workbook POI Workbook 对象
      * @param os PDF文件 输出流
-     * @param columnWidthsArray 每个页的PDF表格列宽
      * @param documentCallback document建立后的回调函数
+     * @param pageStartedCallback page建立后的回调函数
      * @throws IOException
      */
-    private static void process(Workbook workbook, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback) throws IOException {
+    public static void process(Workbook workbook, OutputStream os, Consumer<Document> documentCallback, Consumer<E2pPageEvent> pageStartedCallback) throws IOException {
+        process(workbook, os, null, documentCallback, pageStartedCallback);
+    }
+
+    /**
+     * Excel 转 PDF
+     *
+     * @param workbook          POI Workbook 对象
+     * @param os                PDF文件 输出流
+     * @param columnWidthsArray 每个页的PDF表格列宽
+     * @param documentCallback  document建立后的回调函数
+     * @param pageStartedCallback
+     * @throws IOException
+     */
+    private static void process(Workbook workbook, OutputStream os, UnitValue[][] columnWidthsArray, Consumer<Document> documentCallback, Consumer<E2pPageEvent> pageStartedCallback) throws IOException {
         Map<String, PdfFont> fontCache = new HashMap<String, PdfFont>() {{
             put(DEFAULT_FONT_PATH, ITextUtil.createFont(DEFAULT_FONT_PATH));
         }};
@@ -114,6 +155,8 @@ public class Excel2PDF {
         // init pdf document
         final PdfWriter pdfWriter = new PdfWriter(os);
         final PdfDocument pdfDocument = new PdfDocument(pdfWriter);
+        PdfPageEventHandler pdfPageEventHandler = new PdfPageEventHandler(pageStartedCallback);
+        pdfDocument.addEventHandler(PdfDocumentEvent.START_PAGE, pdfPageEventHandler);
         final Document document = new Document(pdfDocument);
         document.setFont(fontCache.get(DEFAULT_FONT_PATH));
         if (documentCallback != null) {
@@ -123,6 +166,8 @@ public class Excel2PDF {
         // final XSSFWorkbook workbook = new XSSFWorkbook(is);
         for (int sheetIdx = 0; sheetIdx < workbook.getNumberOfSheets(); sheetIdx++) {
             final Sheet sheet = workbook.getSheetAt(sheetIdx);
+            pdfPageEventHandler.setSheetAt(sheetIdx);
+            pdfPageEventHandler.setSheetName(sheet.getSheetName());
             if (sheetIdx > 0) {
                 // 下一页
                 document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
