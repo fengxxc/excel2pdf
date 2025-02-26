@@ -255,7 +255,7 @@ public class ExcelUtil {
                 cellValue = "";
                 break;
         }
-        return cellValue;
+        return replaceLeadingSpaces(cellValue);
     }
 
     public static String getCellValue(CellValue formulaValue) {
@@ -459,4 +459,35 @@ public class ExcelUtil {
         return String.valueOf(value);
     }
 
+    /**
+     * 将字符串开头的空格替换为非断行空格(\u00A0)
+     *
+     * @param str 需要处理的字符串
+     * @return 替换后的字符串
+     */
+    public static String replaceLeadingSpaces(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+
+        // 计算开头有多少个空格
+        int count = 0;
+        while (count < str.length() && str.charAt(count) == ' ') {
+            count++;
+        }
+
+        if (count == 0) {
+            // 如果没有开头空格，直接返回原字符串
+            return str;
+        } else {
+            // 构建替换后的字符串
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < count; i++) {
+                result.append('\u00A0');
+            }
+            // 添加剩余部分
+            result.append(str.substring(count));
+            return result.toString();
+        }
+    }
 }

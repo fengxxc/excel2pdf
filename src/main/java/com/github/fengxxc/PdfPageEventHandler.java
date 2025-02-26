@@ -61,7 +61,9 @@ public class PdfPageEventHandler implements IEventHandler {
         //         .resetFillColorRgb() // 还原颜色
         // ;
 
-        callback.accept(new E2pPageEvent(sheetAt, sheetName, pdfDoc, page));
+        if (callback != null) {
+            callback.accept(new E2pPageEvent(sheetAt, sheetName, pdfDoc, page));
+        }
         // System.out.println(event.getType() + ": " + pageNumber + " " + watermarkText);
         // // 绘制水印
         // new Canvas(pdfCanvas, page.getPageSize())
